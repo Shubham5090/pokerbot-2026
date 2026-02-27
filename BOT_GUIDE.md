@@ -163,7 +163,7 @@ state.can_act(action_class)   # true if you are allowed to take the action actio
 
 Streets are denoted by strings in this system. The different possible streets are `preflop`, `flop`, `auction`, `turn`, and `river`. The current street can be accessed via `current_state.street`.
 
-Every card is represented by a two character string. The first character is from the set {2, 3, 4, 5, 6, 7, 8, 9, T, J, Q, K} representing the value of the card and denoting A, 2, 3, 4, 5, 6, 7, 8, 9, 10, Jack, Queen and King, respectively. The second character is from the set {d, s, c, h} representing the suit of the card and denoting Diamonds, Spades, Clubs and Hearts, respectively.
+Every card is represented by a two character string. The first character is from the set {A, 2, 3, 4, 5, 6, 7, 8, 9, T, J, Q, K} representing the value of the card and denoting A, 2, 3, 4, 5, 6, 7, 8, 9, 10, Jack, Queen and King, respectively. The second character is from the set {d, s, c, h} representing the suit of the card and denoting Diamonds, Spades, Clubs and Hearts, respectively.
 
 For example, 'Ad' denotes the ace of diamonds, '5s' denotes 5 of spades.
 
