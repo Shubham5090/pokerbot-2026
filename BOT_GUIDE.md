@@ -6,9 +6,9 @@ You can use this template to build your own bot for the competition.
 The only file you **must** modify is `bot.py`. The only functions needed to be written by you are
 
 ``` python
-on_hand_start(self, game_info, current_state, active)
-on_hand_end(self, game_info, current_state, active)
-get_move(self, game_info, current_state, active)
+on_hand_start(self, game_info, current_state)
+on_hand_end(self, game_info, current_state)
+get_move(self, game_info, current_state)
 ```
 
 ------------------------------------------------------------------------
