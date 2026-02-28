@@ -199,6 +199,10 @@ class Player(BaseBot):
         max_raise = min(my_chips, opp_chips)
 
         return int(min_raise), int(max_raise)
+
+    def on_hand_start(self, game_info, current_state):
+        self.my_raise_count = 0
+
     def get_move(self, game_info: GameInfo, current_state: PokerState) -> ActionFold | ActionCall | ActionCheck | ActionRaise | ActionBid:
         '''
         Where the magic happens - your code should implement this function.
@@ -240,15 +244,20 @@ class Player(BaseBot):
             # > 60 → Raise (preferably 2x min raise), else call
             if win_pct > 60:
 
-                if current_state.can_act(ActionRaise):
-                    min_r, max_r = current_state.get_raise_limits()
+                if self.my_raise_count < 2 and current_state.can_act(ActionRaise):
 
-                    # raise 2x minimum raise safely
+                    min_r, max_r = current_state.get_raise_limits()
                     raise_amount = min(2 * min_r, max_r)
+
+                    self.my_raise_count += 1
                     return ActionRaise(raise_amount)
 
+                # After 2 raises → just call
                 if current_state.can_act(ActionCall):
                     return ActionCall()
+
+                if current_state.can_act(ActionCheck):
+                    return ActionCheck()
 
             # 20–60 → Call
             elif 20 <= win_pct <= 60:
@@ -281,10 +290,20 @@ class Player(BaseBot):
 
             # If > 70 → Raise
             if win_pct > 70:
-                if current_state.can_act(ActionRaise):
+                if self.my_raise_count < 2 and current_state.can_act(ActionRaise):
+
+                    min_r, max_r = current_state.get_raise_limits()
                     raise_amount = min(2 * min_r, max_r)
+
+                    self.my_raise_count += 1
                     return ActionRaise(raise_amount)
 
+                # After 2 raises → just call
+                if current_state.can_act(ActionCall):
+                    return ActionCall()
+
+                if current_state.can_act(ActionCheck):
+                    return ActionCheck()
             # Otherwise → Call or Check
             if current_state.can_act(ActionCall):
                 return ActionCall()
