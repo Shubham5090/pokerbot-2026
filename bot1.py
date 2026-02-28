@@ -177,7 +177,28 @@ class Player(BaseBot):
 
         win_rate = (wins + 0.5 * ties) / simulations
         return win_rate * 100
+    def compute_raise_bounds(current_state, big_blind):
+        """
+        Computes minimum and maximum legal raise amounts.
+        """
 
+        # values from PokerState
+        current_wager = current_state.my_wager
+        cost_to_call = current_state.cost_to_call
+        my_chips = current_state.my_chips
+        opp_chips = current_state.opp_chips
+
+        # ---- Minimum Raise ----
+        min_raise = (
+            current_wager
+            + cost_to_call
+            + max(big_blind, cost_to_call)
+        )
+
+        # ---- Maximum Raise ----
+        max_raise = min(my_chips, opp_chips)
+
+        return int(min_raise), int(max_raise)
     def get_move(self, game_info: GameInfo, current_state: PokerState) -> ActionFold | ActionCall | ActionCheck | ActionRaise | ActionBid:
         '''
         Where the magic happens - your code should implement this function.
@@ -198,33 +219,82 @@ class Player(BaseBot):
 
             # Bid logic based on win probability
             if 30 <= win_pct <= 50:
-                bid_amount = int(0.25 * chips)
+                bid_amount = int(0.35 * chips)
             else:
-                bid_amount = 0   # don't bid otherwise
+                bid_amount = min(200, 0.5 * chips )   # don't bid otherwise
 
             return ActionBid(bid_amount)
 
 
         if current_state.opp_revealed_cards:
-            # Looking at info from bid
-            for card in current_state.opp_revealed_cards:
-                # If opponent has a high card, we fold
-                if ('A' in card) or ('K' in card) or ('Q' in card) or ('J' in card):
-                    if current_state.can_act(ActionFold):
-                        return ActionFold()
-                    else:
-                        return ActionCheck()
+            win_pct = win_probability_with_known_card(current_state, simulations=250)
+        else:
+            win_pct = win_probability_percent(current_state, simulations=250)
 
-        if current_state.can_act(ActionRaise):
-            # the smallest and largest numbers of chips for a legal bet/raise
-            min_raise, max_raise = current_state.raise_bounds
-            if random.random() < 0.5:
-                return ActionRaise(min_raise)
-        if current_state.can_act(ActionCheck):  # check-call
-            return ActionCheck()
-        if random.random() < 0.25:
-            return ActionFold()
-        return ActionCall()
+
+        # ==========================================================
+        # CASE 1: Opponent has revealed a card
+        # ==========================================================
+        if current_state.opp_revealed_cards:
+
+            # > 60 → Raise (preferably 2x min raise), else call
+            if win_pct > 60:
+
+                if current_state.can_act(ActionRaise):
+                    min_r, max_r = current_state.get_raise_limits()
+
+                    # raise 2x minimum raise safely
+                    raise_amount = min(2 * min_r, max_r)
+                    return ActionRaise(raise_amount)
+
+                if current_state.can_act(ActionCall):
+                    return ActionCall()
+
+            # 20–60 → Call
+            elif 20 <= win_pct <= 60:
+                if current_state.can_act(ActionCall):
+                    return ActionCall()
+
+                if current_state.can_act(ActionCheck):
+                    return ActionCheck()
+
+            # < 20 → Fold
+            else:
+                if current_state.can_act(ActionFold):
+                    return ActionFold()
+
+                if current_state.can_act(ActionCheck):
+                    return ActionCheck()
+
+
+        # ==========================================================
+        # CASE 2: No opponent card revealed
+        # ==========================================================
+        else:
+
+            opponent_raised = current_state.cost_to_call > 0
+
+            # If < 40 and opponent raised → Fold
+            if win_pct < 40 and opponent_raised:
+                if current_state.can_act(ActionFold):
+                    return ActionFold()
+
+            # If > 70 → Raise
+            if win_pct > 70:
+                if current_state.can_act(ActionRaise):
+                    raise_amount = min(2 * min_r, max_r)
+                    return ActionRaise(raise_amount)
+
+            # Otherwise → Call or Check
+            if current_state.can_act(ActionCall):
+                return ActionCall()
+
+            if current_state.can_act(ActionCheck):
+                return ActionCheck()
+
+        # Fallback safety (never return invalid action)
+        return ActionFold()  
+            
 
 
 if __name__ == '__main__':
